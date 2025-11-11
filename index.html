@@ -1,38 +1,41 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema de Ingressos 2025</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<title>Gerador de Ingressos 2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body {
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(120deg, #5b06b8, #1e8fe3);
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #4e54c8, #8f94fb);
   color: white;
   display: flex; justify-content: center; align-items: center;
-  min-height: 100vh; flex-direction: column;
+  height: 100vh; flex-direction: column;
 }
 .container {
   background: rgba(255,255,255,0.1);
-  padding: 25px; border-radius: 14px;
-  width: 95%; max-width: 400px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  padding: 25px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 input, select {
   width: 100%; padding: 10px; margin: 8px 0;
   border-radius: 8px; border: none;
 }
 button {
-  background: linear-gradient(90deg, #00c9a7, #92fe9d);
-  border: none; color: #04203a;
+  background: #00ffcc; border: none; color: #003344;
   padding: 10px 15px; border-radius: 8px;
-  cursor: pointer; width: 100%; font-weight: bold;
+  font-weight: bold; cursor: pointer; width: 100%;
 }
-button:hover { transform: scale(1.03); }
-.result {
-  margin-top: 15px; padding: 10px; border-radius: 8px;
-  background: rgba(0,0,0,0.2); word-wrap: break-word;
+#qrcode { margin-top: 15px; }
+#downloadBtn {
+  display: none; margin-top: 10px;
+  background: #1effac; color: #002b26;
 }
 </style>
 </head>
@@ -47,80 +50,85 @@ button:hover { transform: scale(1.03); }
       <option>COMUM</option>
       <option>BACKSTAGE</option>
     </select>
-
-    <label>📄 Upload do PDF do ingresso:</label>
-    <input type="file" id="pdfFile" accept="application/pdf" />
-
-    <label>📷 Upload do comprovante (opcional):</label>
-    <input type="file" id="comprovanteFile" accept="image/*" />
-
-    <button onclick="enviar()">🚀 Gerar Ingresso</button>
-
-    <div class="result" id="resultado"></div>
+    <button onclick="gerarIngresso()">🚀 Gerar</button>
+    <div id="qrcode"></div>
+    <button id="downloadBtn" onclick="baixarPDF()">📄 Baixar PDF</button>
+    <div id="mensagem"></div>
   </div>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzJuuQSfdkb0MbS9OClPrGDL8CjrqKi9U8PZF36il3gm6ISKaKACw3qKd9A3MAIZq62jQ/exec";
+let codigoGerado = "";
+let nomeP = "", valorP = "", tipoP = "";
 
-// converte arquivo em base64
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+function gerarCodigo() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+  return code;
 }
 
-async function enviar() {
-  const nome = document.getElementById("nome").value.trim();
-  const valor = document.getElementById("valor").value.trim();
-  const tipo = document.getElementById("tipo").value.trim();
-  const pdfFile = document.getElementById("pdfFile").files[0];
-  const comprovanteFile = document.getElementById("comprovanteFile").files[0];
-  const resEl = document.getElementById("resultado");
-  resEl.innerHTML = "⏳ Enviando...";
+async function gerarIngresso() {
+  nomeP = document.getElementById("nome").value.trim();
+  valorP = document.getElementById("valor").value.trim();
+  tipoP = document.getElementById("tipo").value.trim();
+  const msg = document.getElementById("mensagem");
+  msg.innerHTML = "";
 
-  if (!nome || !valor || !tipo || !pdfFile) {
-    resEl.innerHTML = "⚠️ Preencha todos os campos obrigatórios e selecione um PDF.";
+  if (!nomeP || !valorP || !tipoP) {
+    msg.innerHTML = "⚠️ Preencha todos os campos.";
     return;
   }
 
-  try {
-    const pdfBase64 = await fileToBase64(pdfFile);
-    const comprovanteBase64 = comprovanteFile ? await fileToBase64(comprovanteFile) : "";
+  codigoGerado = gerarCodigo();
+  document.getElementById("qrcode").innerHTML = "";
+  new QRCode(document.getElementById("qrcode"), {
+    text: codigoGerado,
+    width: 180,
+    height: 180,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+  });
 
-    // Envia via JSONP
-    const callbackName = "callback_" + Date.now();
-    window[callbackName] = function(response) {
-      if (response.ok) {
-        resEl.innerHTML = `
-          ✅ Ingresso gerado com sucesso!<br>
-          <b>Código:</b> ${response.codigo}<br>
-          <a href="${response.pdfUrl}" target="_blank" style="color:#00ffcc;">Abrir PDF</a>
-        `;
-      } else {
-        resEl.innerHTML = "❌ Erro: " + (response.error || "Erro desconhecido.");
-      }
-    };
+  document.getElementById("downloadBtn").style.display = "block";
+  msg.innerHTML = "✅ Ingresso gerado! Código: <b>" + codigoGerado + "</b>";
 
-    const params = new URLSearchParams({
-      action: "generate",
-      name: nome,
-      value: valor,
-      type: tipo,
-      pdfBase64: pdfBase64,
-      comprovante: comprovanteBase64,
-      callback: callbackName
-    });
+  // Enviar para a planilha (JSONP)
+  const callbackName = "cb_" + Date.now();
+  window[callbackName] = function(res) {
+    if (!res.ok) msg.innerHTML += "<br>❌ Erro ao salvar: " + res.error;
+    else msg.innerHTML += "<br>📊 Dados salvos na planilha!";
+  };
 
-    const script = document.createElement("script");
-    script.src = `${API_URL}?${params.toString()}`;
-    document.body.appendChild(script);
+  const params = new URLSearchParams({
+    action: "generate",
+    name: nomeP,
+    value: valorP,
+    type: tipoP,
+    codigo: codigoGerado,
+    callback: callbackName
+  });
+  const script = document.createElement("script");
+  script.src = `${API_URL}?${params}`;
+  document.body.appendChild(script);
+}
 
-  } catch (err) {
-    resEl.innerHTML = "❌ Erro ao processar arquivos: " + err.message;
-  }
+async function baixarPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  pdf.setFontSize(20);
+  pdf.text("🎟️ Ingresso Oficial 2025", 60, 20);
+  pdf.setFontSize(14);
+  pdf.text("Nome: " + nomeP, 20, 50);
+  pdf.text("Tipo: " + tipoP, 20, 60);
+  pdf.text("Valor: R$" + valorP, 20, 70);
+  pdf.text("Código: " + codigoGerado, 20, 80);
+
+  const qrCanvas = document.querySelector("#qrcode canvas");
+  const imgData = qrCanvas.toDataURL("image/png");
+  pdf.addImage(imgData, "PNG", 60, 90, 90, 90);
+
+  pdf.save(`Ingresso_${nomeP}_${codigoGerado}.pdf`);
 }
 </script>
 </body>
