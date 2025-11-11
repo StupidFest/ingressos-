@@ -1,138 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gerar Ingresso</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 320px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, select, button {
-      padding: 8px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Gerador de Ingressos - Corrigido</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  body{font-family:Arial,sans-serif;background:#f0f2f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px}
+  .card{width:100%;max-width:420px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
+  h1{margin:0 0 12px;font-size:20px;text-align:center}
+  input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-size:14px}
+  button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
+  #qrcode{display:flex;justify-content:center;margin-top:10px}
+  #status{margin-top:8px;font-size:14px;text-align:center}
+</style>
 </head>
 <body>
-  <h2>🎟️ Gerar Ingresso Oficial</h2>
 
-  <form id="ingressoForm">
-    <input type="text" id="name" placeholder="Nome completo" required />
-    <input type="number" id="value" placeholder="Valor" required />
-    <select id="type" required>
-      <option value="VIP">VIP</option>
-      <option value="Pista">Pista</option>
-      <option value="Camarote">Camarote</option>
-    </select>
-    <button type="submit">Gerar Ingresso</button>
-  </form>
+<div class="card">
+  <h1>🎫 Gerador de Ingressos</h1>
+  <input id="name" placeholder="Nome completo" />
+  <input id="value" placeholder="Valor (ex: 50)" />
+  <select id="type">
+    <option value="">— Selecione tipo —</option>
+    <option>VIP</option>
+    <option>Pista</option>
+    <option>Camarote</option>
+  </select>
+  <button id="btnGenerate">Gerar ingresso</button>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
-    const backgroundUrl = "https://i.imgur.com/jjrAjpB.png";
+  <div id="qrcode"></div>
+  <div id="status"></div>
+</div>
 
-    document.getElementById("ingressoForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+<script>
+/* ========== CONFIG ========== */
+const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
+const BACKGROUND_IMG = "https://i.imgur.com/jjrAjpB.png"; // imgur (crossOrigin)
+/* =========================== */
 
-      const name = document.getElementById("name").value.trim();
-      const value = document.getElementById("value").value.trim();
-      const type = document.getElementById("type").value.trim();
-      const codigo = gerarCodigo();
+const btn = document.getElementById('btnGenerate');
+const qrcodeDiv = document.getElementById('qrcode');
+const statusEl = document.getElementById('status');
 
-      // Gera QR Code
-      const qrCanvas = document.createElement("canvas");
-      new QRCode(qrCanvas, {
-        text: codigo,
-        width: 200,
-        height: 200,
-        correctLevel: QRCode.CorrectLevel.H
-      });
-      const qrData = qrCanvas.querySelector("img") ? qrCanvas.querySelector("img").src : qrCanvas.toDataURL("image/png");
+function gerarCodigo(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out="";
+  for(let i=0;i<8;i++) out+=chars.charAt(Math.floor(Math.random()*chars.length));
+  return out;
+}
 
-      // Cria PDF
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+// JSONP sender (sends only the small params: no pdfBase64)
+function sendJsonp(paramsObj, cb){
+  const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+  window[callbackName] = function(resp){
+    try{ cb(null, resp); } catch(e){ cb(e); }
+    try{ delete window[callbackName]; } catch(e){}
+    const s = document.getElementById(callbackName + '_script'); if(s) s.remove();
+  };
+  const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
+  const script = document.createElement('script');
+  script.id = callbackName + '_script';
+  script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
+  script.onerror = function(){ cb(new Error('Erro ao carregar JSONP')); delete window[callbackName]; script.remove(); };
+  document.body.appendChild(script);
+}
 
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
+function clearQRCode(){
+  qrcodeDiv.innerHTML = "";
+}
 
-      // Carrega imagem de fundo
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.src = backgroundUrl;
-      img.onload = async () => {
-        doc.addImage(img, "PNG", 0, 0, pageWidth, pageHeight);
+function renderQRCode(text, size=180){
+  clearQRCode();
+  // qrcodejs needs a DOM element; it may create an IMG or CANVAS
+  const holder = document.createElement('div');
+  holder.style.background = "#fff";
+  holder.style.padding = "8px";
+  holder.style.borderRadius = "8px";
+  qrcodeDiv.appendChild(holder);
+  new QRCode(holder, { text, width: size, height: size, colorDark:"#000000", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  return holder;
+}
 
-        // Texto sobreposto
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(16);
+async function generateAndSend(){
+  statusEl.textContent = "";
+  clearQRCode();
 
-        // Posições ajustadas para sobrepor o layout
-        doc.text(`Nome: ${name}`, 60, 260);
-        doc.text(`Tipo: ${type}`, 60, 280);
-        doc.text(`Valor: R$ ${value}`, 60, 300);
-        doc.text(`Código: ${codigo}`, 60, 320);
+  const name = (document.getElementById('name').value||"").trim();
+  const value = (document.getElementById('value').value||"").trim();
+  const type = (document.getElementById('type').value||"").trim();
 
-        // QR Code visível e nítido
-        doc.addImage(qrData, "PNG", 340, 220, 130, 130);
+  if(!name || !value || !type){ statusEl.textContent = "⚠️ Preencha Nome, Valor e Tipo."; return; }
 
-        // Gera base64 do PDF
-        const pdfBase64 = doc.output("datauristring");
+  const code = gerarCodigo();
+  renderQRCode(code, 220);
+  statusEl.textContent = "⏳ Gerando PDF e salvando...";
 
-        // Envia ao Google Apps Script
-        const url = `${API_URL}?action=generate&name=${encodeURIComponent(name)}&value=${encodeURIComponent(value)}&type=${encodeURIComponent(type)}&codigo=${encodeURIComponent(codigo)}&pdfBase64=${encodeURIComponent(pdfBase64)}&callback=teste`;
+  // Create PDF locally (with background image + text + QR)
+  const { jsPDF } = window.jspdf;
+  // A6 landscape/portrait? We'll use landscape A6 mapped to px for output clarity
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]}); // same as 148x105 mm
 
-        try {
-          const res = await fetch(url);
-          const text = await res.text();
-          console.log("Resposta:", text);
-          alert("✅ Ingresso gerado e salvo com sucesso!");
-        } catch (err) {
-          console.error(err);
-          alert("❌ Erro ao salvar ingresso!");
-        }
+  // load background image as Image object (crossOrigin to allow addImage)
+  const bgImg = await loadImage(BACKGROUND_IMG);
 
-        // Baixar localmente
-        doc.save(`Ingresso_${name}_${codigo}.pdf`);
-      };
-    });
+  // Add background fitted to ticket size
+  doc.addImage(bgImg, 'PNG', 0, 0, 148, 105);
 
-    function gerarCodigo() {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let code = "";
-      for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-      return code;
+  // Add text: use black for contrast
+  doc.setTextColor(0,0,0);
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(12);
+  // positions tuned to your background (adjust if necessary)
+  doc.text(`Nome: ${name}`, 12, 30);
+  doc.text(`Tipo: ${type}`, 12, 38);
+  doc.text(`Valor: R$ ${value}`, 12, 46);
+  doc.text(`Código: ${code}`, 12, 54);
+
+  // Extract QR canvas (from DOM) and put into PDF at good size (mm)
+  const holder = qrcodeDiv.querySelector('div'); // our wrapper
+  let qrImgData = null;
+  if(holder){
+    const canvas = holder.querySelector('canvas');
+    if(canvas){
+      qrImgData = canvas.toDataURL('image/png');
+    } else {
+      const img = holder.querySelector('img');
+      if(img){
+        // convert <img> to canvas to guarantee toDataURL
+        const tmp = document.createElement('canvas');
+        tmp.width = img.naturalWidth;
+        tmp.height = img.naturalHeight;
+        const ctx = tmp.getContext('2d');
+        ctx.drawImage(img,0,0);
+        qrImgData = tmp.toDataURL('image/png');
+      }
     }
-  </script>
+  }
+
+  if(qrImgData){
+    // place QR at right side (positions in mm)
+    // x=148- (margin+qrWidth), y = 20
+    const qrWidthMm = 36; // mm (good readable size)
+    const qrHeightMm = 36;
+    const x = 148 - qrWidthMm - 10;
+    const y = 20;
+    doc.addImage(qrImgData, 'PNG', x, y, qrWidthMm, qrHeightMm);
+  }
+
+  // Save PDF locally (user download)
+  const safe = name.replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
+  const filename = `Ingresso_${safe}_${code}.pdf`;
+  doc.save(filename);
+
+  // IMPORTANT: send only small params to Apps Script via JSONP (no pdfBase64)
+  sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
+    if(err){
+      statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
+      console.error(err);
+      return;
+    }
+    if(resp && resp.ok){
+      statusEl.innerHTML = `✅ Ingresso salvo! Código: <b>${resp.codigo}</b> — pronto para baixar.`;
+    } else {
+      statusEl.textContent = "❌ Erro ao salvar: " + (resp && (resp.error||resp.message) ? (resp.error||resp.message) : 'Resposta inválida');
+      console.log('resp', resp);
+    }
+  });
+}
+
+// helper: load image with crossOrigin and return HTMLImageElement
+function loadImage(url){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = ()=>resolve(img);
+    img.onerror = (e)=>reject(new Error('Falha ao carregar imagem de fundo: '+url));
+    img.src = url;
+  });
+}
+
+// wire
+btn.addEventListener('click', generateAndSend);
+
+// enter submits
+['name','value'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ generateAndSend(); }});
+});
+</script>
 </body>
 </html>
