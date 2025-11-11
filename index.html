@@ -1,173 +1,138 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>🎟️ Gerador de Ingressos</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerar Ingresso</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      background: radial-gradient(circle at top, #240046, #10002b);
-      color: white;
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
+      padding: 30px;
     }
-    .container {
-      background: rgba(255, 255, 255, 0.08);
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 320px;
+      background: white;
       padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     input, select, button {
-      width: 100%;
-      margin: 6px 0;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-    input, select {
-      background: rgba(0,0,0,0.3);
-      color: white;
-      text-align: center;
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
     button {
-      background: linear-gradient(90deg, #ff0080, #ff8c00);
+      background: #007bff;
       color: white;
-      font-weight: 700;
       cursor: pointer;
-    }
-    button:hover {
-      transform: scale(1.05);
       transition: 0.2s;
     }
-    #qrcode {
-      margin: 10px auto;
-    }
-    #pdfLink {
-      margin-top: 12px;
-      display: none;
-      color: #00e5ff;
-      font-weight: bold;
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
+  <h2>🎟️ Gerar Ingresso Oficial</h2>
 
-  <div class="container">
-    <h2>🎫 Gerador de Ingresso</h2>
-    <input id="nome" placeholder="Nome completo">
-    <input id="valor" placeholder="Valor (R$)">
-    <select id="tipo">
-      <option value="">Tipo de ingresso</option>
-      <option>VIP</option>
-      <option>BACKSTAGE</option>
-      <option>PISTA</option>
-      <option>CAMAROTE</option>
+  <form id="ingressoForm">
+    <input type="text" id="name" placeholder="Nome completo" required />
+    <input type="number" id="value" placeholder="Valor" required />
+    <select id="type" required>
+      <option value="VIP">VIP</option>
+      <option value="Pista">Pista</option>
+      <option value="Camarote">Camarote</option>
     </select>
-    <button onclick="gerarIngresso()">GERAR INGRESSO</button>
-    <div id="status"></div>
-    <div id="qrcode"></div>
-    <a id="pdfLink" download>⬇️ Baixar PDF do ingresso</a>
-  </div>
+    <button type="submit">Gerar Ingresso</button>
+  </form>
 
-<script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
+    const backgroundUrl = "https://i.imgur.com/jjrAjpB.png";
 
-let nomeAtual="", tipoAtual="", valorAtual="", codigoAtual="";
-let qrcodeContainer = document.getElementById("qrcode");
+    document.getElementById("ingressoForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-async function gerarIngresso(){
-  nomeAtual = document.getElementById("nome").value.trim();
-  valorAtual = document.getElementById("valor").value.trim();
-  tipoAtual = document.getElementById("tipo").value.trim();
-  const status = document.getElementById("status");
-  
-  if(!nomeAtual || !valorAtual || !tipoAtual){
-    status.innerHTML = "⚠️ Preencha todos os campos!";
-    return;
-  }
+      const name = document.getElementById("name").value.trim();
+      const value = document.getElementById("value").value.trim();
+      const type = document.getElementById("type").value.trim();
+      const codigo = gerarCodigo();
 
-  status.innerHTML = "⏳ Gerando ingresso...";
-  try{
-    const resp = await fetch(`${API_URL}?action=generate&name=${encodeURIComponent(nomeAtual)}&value=${encodeURIComponent(valorAtual)}&type=${encodeURIComponent(tipoAtual)}`);
-    const data = await resp.json();
-    console.log(data);
+      // Gera QR Code
+      const qrCanvas = document.createElement("canvas");
+      new QRCode(qrCanvas, {
+        text: codigo,
+        width: 200,
+        height: 200,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      const qrData = qrCanvas.querySelector("img") ? qrCanvas.querySelector("img").src : qrCanvas.toDataURL("image/png");
 
-    if(data.ok){
-      codigoAtual = data.codigo;
-      status.innerHTML = "✅ Ingresso gerado com sucesso!";
-      gerarQRCode(codigoAtual);
-      gerarPdfBaixar();
-    }else{
-      status.innerHTML = "❌ Erro: " + data.error;
+      // Cria PDF
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Carrega imagem de fundo
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = backgroundUrl;
+      img.onload = async () => {
+        doc.addImage(img, "PNG", 0, 0, pageWidth, pageHeight);
+
+        // Texto sobreposto
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(16);
+
+        // Posições ajustadas para sobrepor o layout
+        doc.text(`Nome: ${name}`, 60, 260);
+        doc.text(`Tipo: ${type}`, 60, 280);
+        doc.text(`Valor: R$ ${value}`, 60, 300);
+        doc.text(`Código: ${codigo}`, 60, 320);
+
+        // QR Code visível e nítido
+        doc.addImage(qrData, "PNG", 340, 220, 130, 130);
+
+        // Gera base64 do PDF
+        const pdfBase64 = doc.output("datauristring");
+
+        // Envia ao Google Apps Script
+        const url = `${API_URL}?action=generate&name=${encodeURIComponent(name)}&value=${encodeURIComponent(value)}&type=${encodeURIComponent(type)}&codigo=${encodeURIComponent(codigo)}&pdfBase64=${encodeURIComponent(pdfBase64)}&callback=teste`;
+
+        try {
+          const res = await fetch(url);
+          const text = await res.text();
+          console.log("Resposta:", text);
+          alert("✅ Ingresso gerado e salvo com sucesso!");
+        } catch (err) {
+          console.error(err);
+          alert("❌ Erro ao salvar ingresso!");
+        }
+
+        // Baixar localmente
+        doc.save(`Ingresso_${name}_${codigo}.pdf`);
+      };
+    });
+
+    function gerarCodigo() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
     }
-  }catch(err){
-    console.error(err);
-    status.innerHTML = "❌ Falha de conexão.";
-  }
-}
-
-function gerarQRCode(texto){
-  qrcodeContainer.innerHTML = "";
-  new QRCode(qrcodeContainer, {
-    text: texto,
-    width: 140,
-    height: 140,
-    colorDark: "#000000",
-    colorLight: "#ffffff"
-  });
-}
-
-async function gerarPdfBaixar(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:"landscape", unit:"mm", format:"A6"});
-
-  // Fundo personalizado
-  const bgImg = await loadImage("https://i.imgur.com/jjrAjpB.png");
-  doc.addImage(bgImg, "PNG", 0, 0, 148, 105);
-
-  // Texto sobreposto
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(nomeAtual.toUpperCase(), 20, 60);
-  doc.setFontSize(12);
-  doc.text("Tipo: " + tipoAtual, 20, 68);
-  doc.text("Valor: R$ " + valorAtual, 20, 76);
-  doc.text("Código: " + codigoAtual, 20, 84);
-
-  // QRCode dentro do PDF
-  const qrCanvas = qrcodeContainer.querySelector("canvas");
-  if(qrCanvas){
-    const imgData = qrCanvas.toDataURL("image/png");
-    doc.addImage(imgData, "PNG", 100, 38, 40, 40);
-  }
-
-  const safeName = nomeAtual.replace(/[^a-z0-9_\-]/gi, "_");
-  const fileName = `Ingresso_${safeName}_${codigoAtual}.pdf`;
-  doc.save(fileName);
-  
-  const pdfLink = document.getElementById("pdfLink");
-  pdfLink.style.display = "block";
-  pdfLink.textContent = "⬇️ Baixar novamente";
-}
-
-function loadImage(url){
-  return new Promise(resolve=>{
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = ()=>resolve(img);
-    img.src = url;
-  });
-}
-</script>
+  </script>
 </body>
 </html>
