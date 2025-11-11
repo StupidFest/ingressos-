@@ -39,7 +39,7 @@
 <script>
 /* ========== CONFIG ========== */
 const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
-const BACKGROUND_IMG = "https://i.imgur.com/jjrAjpB.png"; // imgur (crossOrigin)
+const BACKGROUND_IMG = "https://i.imgur.com/jjrAjpB.png";
 /* =========================== */
 
 const btn = document.getElementById('btnGenerate');
@@ -53,19 +53,18 @@ function gerarCodigo(){
   return out;
 }
 
-// JSONP sender (sends only the small params: no pdfBase64)
 function sendJsonp(paramsObj, cb){
   const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
   window[callbackName] = function(resp){
-    try{ cb(null, resp); } catch(e){ cb(e); }
-    try{ delete window[callbackName]; } catch(e){}
-    const s = document.getElementById(callbackName + '_script'); if(s) s.remove();
+    cb(null, resp);
+    delete window[callbackName];
+    document.getElementById(callbackName + '_script')?.remove();
   };
   const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
   const script = document.createElement('script');
   script.id = callbackName + '_script';
   script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
-  script.onerror = function(){ cb(new Error('Erro ao carregar JSONP')); delete window[callbackName]; script.remove(); };
+  script.onerror = () => cb(new Error('Erro JSONP'));
   document.body.appendChild(script);
 }
 
@@ -73,9 +72,8 @@ function clearQRCode(){
   qrcodeDiv.innerHTML = "";
 }
 
-function renderQRCode(text, size=180){
+function renderQRCode(text, size=240){
   clearQRCode();
-  // qrcodejs needs a DOM element; it may create an IMG or CANVAS
   const holder = document.createElement('div');
   holder.style.background = "#fff";
   holder.style.padding = "8px";
@@ -96,100 +94,83 @@ async function generateAndSend(){
   if(!name || !value || !type){ statusEl.textContent = "⚠️ Preencha Nome, Valor e Tipo."; return; }
 
   const code = gerarCodigo();
-  renderQRCode(code, 220);
-  statusEl.textContent = "⏳ Gerando PDF e salvando...";
 
-  // Create PDF locally (with background image + text + QR)
+  // ✅ QR contém EXATAMENTE o código
+  renderQRCode(code, 260);
+  statusEl.textContent = "⏳ Gerando PDF...";
+
   const { jsPDF } = window.jspdf;
-  // A6 landscape/portrait? We'll use landscape A6 mapped to px for output clarity
-  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]}); // same as 148x105 mm
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]});
 
-  // load background image as Image object (crossOrigin to allow addImage)
   const bgImg = await loadImage(BACKGROUND_IMG);
 
-  // Add background fitted to ticket size
-  doc.addImage(bgImg, 'PNG', 0, 0, 148, 105);
+  // Calcular proporção correta
+  const pageW = 148, pageH = 105;
+  const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
+  const imgW = bgImg.width * ratio;
+  const imgH = bgImg.height * ratio;
+  const x = (pageW - imgW) / 2;
+  const y = (pageH - imgH) / 2;
 
-  // Add text: use black for contrast
-  doc.setTextColor(0,0,0);
+  doc.addImage(bgImg, 'PNG', x, y, imgW, imgH);
+
+  // Texto legível: branco com sombra
+  function drawText(txt, x, y){
+    doc.setTextColor(0,0,0);
+    doc.text(txt, x+0.4, y+0.4);
+    doc.setTextColor(255,255,255);
+    doc.text(txt, x, y);
+  }
+
   doc.setFont("helvetica","bold");
-  doc.setFontSize(12);
-  // positions tuned to your background (adjust if necessary)
-  doc.text(`Nome: ${name}`, 12, 30);
-  doc.text(`Tipo: ${type}`, 12, 38);
-  doc.text(`Valor: R$ ${value}`, 12, 46);
-  doc.text(`Código: ${code}`, 12, 54);
+  doc.setFontSize(13);
+  drawText(`Nome: ${name}`, 12, 34);
+  drawText(`Tipo: ${type}`, 12, 42);
+  drawText(`Valor: R$ ${value}`, 12, 50);
+  drawText(`Código: ${code}`, 12, 58);
 
-  // Extract QR canvas (from DOM) and put into PDF at good size (mm)
-  const holder = qrcodeDiv.querySelector('div'); // our wrapper
+  const holder = qrcodeDiv.querySelector('div');
   let qrImgData = null;
   if(holder){
     const canvas = holder.querySelector('canvas');
-    if(canvas){
-      qrImgData = canvas.toDataURL('image/png');
-    } else {
-      const img = holder.querySelector('img');
-      if(img){
-        // convert <img> to canvas to guarantee toDataURL
-        const tmp = document.createElement('canvas');
-        tmp.width = img.naturalWidth;
-        tmp.height = img.naturalHeight;
-        const ctx = tmp.getContext('2d');
-        ctx.drawImage(img,0,0);
-        qrImgData = tmp.toDataURL('image/png');
-      }
-    }
+    if(canvas){ qrImgData = canvas.toDataURL('image/png'); }
   }
 
   if(qrImgData){
-    // place QR at right side (positions in mm)
-    // x=148- (margin+qrWidth), y = 20
-    const qrWidthMm = 36; // mm (good readable size)
-    const qrHeightMm = 36;
-    const x = 148 - qrWidthMm - 10;
-    const y = 20;
-    doc.addImage(qrImgData, 'PNG', x, y, qrWidthMm, qrHeightMm);
+    const qrWidthMm = 40;
+    const qrHeightMm = 40;
+    const xQr = 148 - qrWidthMm - 10;
+    const yQr = 25;
+    doc.addImage(qrImgData, 'PNG', xQr, yQr, qrWidthMm, qrHeightMm);
   }
 
-  // Save PDF locally (user download)
   const safe = name.replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
-  const filename = `Ingresso_${safe}_${code}.pdf`;
-  doc.save(filename);
+  doc.save(`Ingresso_${safe}_${code}.pdf`);
 
-  // IMPORTANT: send only small params to Apps Script via JSONP (no pdfBase64)
   sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
     if(err){
       statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
-      console.error(err);
       return;
     }
     if(resp && resp.ok){
-      statusEl.innerHTML = `✅ Ingresso salvo! Código: <b>${resp.codigo}</b> — pronto para baixar.`;
+      statusEl.innerHTML = `✅ Ingresso salvo! Código: <b>${resp.codigo}</b>`;
     } else {
-      statusEl.textContent = "❌ Erro ao salvar: " + (resp && (resp.error||resp.message) ? (resp.error||resp.message) : 'Resposta inválida');
-      console.log('resp', resp);
+      statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido');
     }
   });
 }
 
-// helper: load image with crossOrigin and return HTMLImageElement
 function loadImage(url){
   return new Promise((resolve,reject)=>{
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = ()=>resolve(img);
-    img.onerror = (e)=>reject(new Error('Falha ao carregar imagem de fundo: '+url));
+    img.onerror = ()=>reject(new Error("Erro ao carregar imagem"));
     img.src = url;
   });
 }
 
-// wire
 btn.addEventListener('click', generateAndSend);
-
-// enter submits
-['name','value'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ generateAndSend(); }});
-});
 </script>
 </body>
 </html>
