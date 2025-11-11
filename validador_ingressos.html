@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validador de Ingressos 🎟️</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0b3b86, #2b0464);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    h1 { color: #ffd166; }
+    #reader {
+      width: 300px;
+      margin: 20px auto;
+      border: 2px solid #ffd166;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #resultBox {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      display: none;
+    }
+    .ok { color: #00ff9d; }
+    .erro { color: #ff4b5c; }
+    button {
+      background: linear-gradient(90deg, #ff3cac, #784ba0);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+    button:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+  <h1>🎟️ Validador de Ingressos</h1>
+  <div id="reader"></div>
+  <div id="resultBox"></div>
+  <button id="btnReiniciar" style="display:none;">🔄 Escanear Outro</button>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
+
+    const resultBox = document.getElementById('resultBox');
+    const btnReiniciar = document.getElementById('btnReiniciar');
+
+    function exibirResultado(msg, sucesso = true) {
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = msg;
+      resultBox.className = sucesso ? 'ok' : 'erro';
+    }
+
+    function validarCodigo(codigo) {
+      fetch(`${API_URL}?action=validate&codigo=${codigo}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok && data.status === "OK") {
+            exibirResultado(`✅ <b>Válido!</b><br>Nome: ${data.nome}<br>Valor: ${data.valor}<br>Tipo: ${data.tipo}`);
+          } else if (data.status === "USADO") {
+            exibirResultado("⚠️ Este ingresso já foi utilizado.", false);
+          } else {
+            exibirResultado("❌ Código inválido ou não encontrado.", false);
+          }
+          btnReiniciar.style.display = 'inline-block';
+        })
+        .catch(() => exibirResultado("❌ Erro de conexão com o servidor.", false));
+    }
+
+    function iniciarScanner() {
+      const scanner = new Html5Qrcode("reader");
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+          scanner.start(
+            cameras[0].id,
+            { fps: 10, qrbox: 250 },
+            decodedText => {
+              scanner.stop();
+              validarCodigo(decodedText.trim());
+            },
+            errorMessage => {}
+          );
+        } else {
+          exibirResultado("Nenhuma câmera encontrada.", false);
+        }
+      });
+    }
+
+    btnReiniciar.onclick = () => location.reload();
+    window.onload = iniciarScanner;
+  </script>
+</body>
+</html>
