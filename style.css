@@ -1,0 +1,6 @@
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f0f2f5; }
+h2 { text-transform: uppercase; color:#333; }
+#reader { width:100%; max-width:420px; height:360px; margin:10px auto; background:#000; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#aaa; }
+#preview img { max-width:260px; display:block; margin:10px 0; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+#scanResult { font-size:1rem; }
+.card { border-radius:12px; }
