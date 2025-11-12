@@ -109,19 +109,35 @@ button:hover { background:#005fd1; }
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.85);
   display:flex;
   justify-content:center;
   align-items:center;
   z-index:9999;
-  display:none;
   flex-direction:column;
   color:#fff;
   font-size:28px;
   font-weight:bold;
   text-align:center;
   padding:20px;
-  border-radius:15px;
+  display:none;
+}
+
+.message-overlay button {
+  margin-top:25px;
+  padding:15px 30px;
+  font-size:22px;
+  border-radius:12px;
+  border:none;
+  background:#fff;
+  color:#333;
+  cursor:pointer;
+  font-weight:bold;
+  transition:0.2s;
+}
+
+.message-overlay button:hover {
+  background:#f0f0f0;
 }
 </style>
 </head>
@@ -155,7 +171,10 @@ button:hover { background:#005fd1; }
   </div>
 </div>
 
-<div id="messageOverlay" class="message-overlay"></div>
+<div id="messageOverlay" class="message-overlay">
+  <div id="messageText"></div>
+  <button id="okButton">OK</button>
+</div>
 
 <audio id="soundSuccess">
   <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YYQAAAAA" type="audio/wav">
@@ -180,6 +199,8 @@ const btnGen = document.getElementById('switchToGen');
 let html5QrScanner;
 
 const overlay = document.getElementById('messageOverlay');
+const messageText = document.getElementById('messageText');
+const okButton = document.getElementById('okButton');
 const soundSuccess = document.getElementById('soundSuccess');
 const soundFail = document.getElementById('soundFail');
 
@@ -320,14 +341,10 @@ function startScanner(){
 
   html5QrScanner.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 200 },
-    qrCodeMessage => {
-      validateTicket(qrCodeMessage);
-    },
+    { fps: 15, qrbox: 200 },
+    qrCodeMessage => { validateTicket(qrCodeMessage); },
     errorMessage => {}
-  ).catch(err => {
-    scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
-  });
+  ).catch(err => { scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err; });
 }
 
 function stopScanner(){
@@ -339,13 +356,14 @@ function stopScanner(){
 }
 
 function showMessage(text, isValid){
-  overlay.style.display = "flex";
-  overlay.textContent = text;
+  messageText.innerHTML = text.replace(/\n/g,'<br>');
   overlay.style.backgroundColor = isValid ? "rgba(0,180,0,0.85)" : "rgba(220,0,0,0.85)";
+  overlay.style.display = "flex";
   if(isValid) soundSuccess.play();
   else soundFail.play();
-  setTimeout(()=>overlay.style.display="none",2000);
 }
+
+okButton.addEventListener('click', ()=>{ overlay.style.display='none'; });
 
 function validateTicket(code){
   sendJsonp({ action: "validate", codigo: code }, (err, resp)=>{
@@ -367,6 +385,5 @@ btnGenerate.addEventListener('click', generateAndSend);
 btnScan.addEventListener('click', startScanner);
 btnGen.addEventListener('click', stopScanner);
 </script>
-
 </body>
 </html>
