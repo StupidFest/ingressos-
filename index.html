@@ -101,10 +101,8 @@
   </div>
 
   <script>
-    /* ========== CONFIG ========== */
     const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
     const BACKGROUND_IMG = "https://i.imgur.com/91zRBfN.png";
-    /* =========================== */
 
     const btnGenerate = document.getElementById('btnGenerate');
     const qrcodeDiv = document.getElementById('qrcode');
@@ -144,7 +142,7 @@
       clearQRCode();
       const holder = document.createElement('div');
       holder.style.background = "#fff";
-      holder.style.padding = "0"; // padding zero facilita leitura do scanner
+      holder.style.padding = "0";
       holder.style.borderRadius = "8px";
       qrcodeDiv.appendChild(holder);
       new QRCode(holder, {
@@ -177,7 +175,6 @@
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]});
-
       const bgImg = await loadImage(BACKGROUND_IMG);
       const pageW = 148, pageH = 105;
       const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
@@ -252,23 +249,28 @@
       if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
       html5QrScanner = new Html5Qrcode("reader");
 
-      const boxSize = Math.min(window.innerWidth * 0.8, 300); // QR box responsivo
+      const boxSize = Math.min(window.innerWidth * 0.8, 300);
 
-      html5QrScanner.start(
-        { 
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        { fps: 20, qrbox: boxSize },
-        qrCodeMessage => {
-          scanStatus.textContent = "⏳ Verificando...";
-          html5QrScanner.stop().catch(()=>{});
-          validateTicket(qrCodeMessage);
-        },
-        errorMessage => {}
-      ).catch(err => {
-        scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
+      Html5Qrcode.getCameras().then(cameras => {
+        if(cameras && cameras.length){
+          const cameraId = cameras[0].id;
+          html5QrScanner.start(
+            cameraId,
+            { fps: 20, qrbox: boxSize },
+            qrCodeMessage => {
+              scanStatus.textContent = "⏳ Verificando...";
+              html5QrScanner.stop().catch(()=>{});
+              validateTicket(qrCodeMessage);
+            },
+            errorMessage => {}
+          ).catch(err => {
+            scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
+          });
+        } else {
+          scanStatus.textContent = "❌ Nenhuma câmera encontrada";
+        }
+      }).catch(err => {
+        scanStatus.textContent = "❌ Erro ao acessar câmeras: " + err;
       });
     }
 
