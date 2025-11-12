@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>🎫 Sistema de Ingressos - Tela</title>
+<title>🎫 Sistema de Ingressos - Ultra Scan</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -112,6 +112,7 @@ const scannerArea = document.getElementById('scanner-area');
 const btnScan = document.getElementById('switchToScan');
 const btnGen = document.getElementById('switchToGen');
 let html5QrScanner;
+let scanning = false;
 
 function gerarCodigo(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -237,13 +238,15 @@ function loadImage(url){
   });
 }
 
-// === SCANNER CONTÍNUO PARA TELAS ===
+// === SCANNER ULTRA-AGRESSIVO PARA TELAS ===
 function startScanner(){
   generator.style.display = "none";
   scannerArea.style.display = "flex";
   btnScan.style.display = "none";
   btnGen.style.display = "inline-block";
   scanStatus.textContent = "Aponte a câmera para o QR Code do ingresso.";
+
+  scanning = true;
 
   if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
   html5QrScanner = new Html5Qrcode("reader");
@@ -265,21 +268,31 @@ function startScanner(){
       }
     }
 
+    // função de scan contínuo
+    function scanLoop(){
+      if(!scanning) return;
+      html5QrScanner.scanFileV2().then(qrCodeMessage=>{
+        if(qrCodeMessage){
+          scanStatus.textContent="⏳ Verificando...";
+          validateTicket(qrCodeMessage);
+        }
+        setTimeout(scanLoop, 50); // loop ultra rápido
+      }).catch(err=>{
+        setTimeout(scanLoop, 50); // continua tentando
+      });
+    }
+
     html5QrScanner.start(
       cameraId,
-      {
-        fps: 30,
-        qrbox: boxSize,
-        disableFlip: false
-      },
-      qrCodeMessage => {
+      { fps: 30, qrbox: boxSize, disableFlip: false },
+      qrCodeMessage=>{
         scanStatus.textContent="⏳ Verificando...";
         validateTicket(qrCodeMessage);
-        // mantém scanner ativo
-        setTimeout(()=>scanStatus.textContent="Aponte a câmera para o QR Code do ingresso.", 300);
       },
-      errorMessage => {}
-    ).catch(err=>{
+      err=>{}
+    ).then(()=>{
+      scanLoop(); // inicia loop contínuo ultra rápido
+    }).catch(err=>{
       scanStatus.textContent="❌ Erro ao iniciar câmera: "+err;
     });
 
@@ -293,6 +306,7 @@ function stopScanner(){
   scannerArea.style.display = "none";
   btnScan.style.display = "inline-block";
   btnGen.style.display = "none";
+  scanning=false;
   if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
 }
 
