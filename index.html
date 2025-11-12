@@ -144,7 +144,7 @@
       clearQRCode();
       const holder = document.createElement('div');
       holder.style.background = "#fff";
-      holder.style.padding = "8px";
+      holder.style.padding = "0"; // padding zero facilita leitura do scanner
       holder.style.borderRadius = "8px";
       qrcodeDiv.appendChild(holder);
       new QRCode(holder, {
@@ -199,7 +199,6 @@
       drawText(`Nome: ${name}`, 12, 34);
       drawText(`Tipo: ${type}`, 12, 42);
       drawText(`Valor: R$ ${value}`, 12, 50);
-      // Código removido visualmente, mas QR contém ele
 
       const holder = qrcodeDiv.querySelector('div');
       let qrImgData = null;
@@ -216,7 +215,7 @@
         doc.addImage(qrImgData, 'PNG', xQr, yQr, qrWidthMm, qrHeightMm);
       }
 
-      const safe = name.replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
+      const safe = name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
       doc.save(`Ingresso_${safe}_${code}.pdf`);
 
       sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
@@ -242,7 +241,7 @@
       });
     }
 
-    // === SCANNER ===
+    // === SCANNER OTIMIZADO ===
     function startScanner(){
       generator.style.display = "none";
       scannerArea.style.display = "flex";
@@ -252,9 +251,16 @@
 
       if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
       html5QrScanner = new Html5Qrcode("reader");
+
+      const boxSize = Math.min(window.innerWidth * 0.8, 300); // QR box responsivo
+
       html5QrScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 200 },
+        { 
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        { fps: 20, qrbox: boxSize },
         qrCodeMessage => {
           scanStatus.textContent = "⏳ Verificando...";
           html5QrScanner.stop().catch(()=>{});
