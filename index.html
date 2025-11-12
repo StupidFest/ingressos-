@@ -1,314 +1,313 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>🎫 Sistema de Ingressos</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🎫 Sistema de Ingressos - Tela</title>
 
-  <!-- Libs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+<!-- Libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
-  <style>
-    * { box-sizing:border-box }
-    body{
-      font-family:Arial,sans-serif;
-      background:#f0f2f5;
-      margin:0;
-      padding:0;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      min-height:100vh;
-    }
-    .container{
-      width:100%;
-      max-width:420px;
-      background:#fff;
-      border-radius:14px;
-      box-shadow:0 8px 30px rgba(0,0,0,0.12);
-      padding:18px;
-    }
-    h1{
-      text-align:center;
-      margin-bottom:12px;
-      font-size:22px;
-    }
-    input,select,button{
-      width:100%;
-      padding:10px;
-      margin:6px 0;
-      border-radius:8px;
-      border:1px solid #ddd;
-      font-size:14px;
-    }
-    button{
-      background:#007bff;
-      color:#fff;
-      border:none;
-      cursor:pointer;
-      font-weight:bold;
-    }
-    button:hover{ background:#005fd1 }
-    #qrcode{ display:flex;justify-content:center;margin-top:10px }
-    #status{ text-align:center;margin-top:10px;font-size:14px;min-height:20px }
+<style>
+* { box-sizing:border-box }
+body{
+  font-family:Arial,sans-serif;
+  background:#f0f2f5;
+  margin:0;
+  padding:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+.container{
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.12);
+  padding:18px;
+}
+h1{
+  text-align:center;
+  margin-bottom:12px;
+  font-size:22px;
+}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:14px;
+}
+button{
+  background:#007bff;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+  font-weight:bold;
+}
+button:hover{ background:#005fd1 }
+#qrcode{ display:flex;justify-content:center;margin-top:10px }
+#status{ text-align:center;margin-top:10px;font-size:14px;min-height:20px }
 
-    #scanner-area{
-      display:none;
-      flex-direction:column;
-      align-items:center;
-      text-align:center;
-    }
-    #reader{
-      width:100%;
-      max-width:320px;
-      margin:auto;
-    }
-    .switcher{
-      text-align:center;
-      margin-top:10px;
-    }
-  </style>
+#scanner-area{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+#reader{
+  width:100%;
+  max-width:100%;
+  margin:auto;
+}
+.switcher{
+  text-align:center;
+  margin-top:10px;
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>🎟️ Sistema de Ingressos</h1>
+<div class="container">
+  <h1>🎟️ Sistema de Ingressos</h1>
 
-    <div id="generator">
-      <input id="name" placeholder="Nome completo" />
-      <input id="value" placeholder="Valor (ex: 50)" />
-      <select id="type">
-        <option value="">— Selecione tipo —</option>
-        <option>VIP</option>
-        <option>Pista</option>
-        <option>Camarote</option>
-      </select>
-      <button id="btnGenerate">Gerar ingresso</button>
-      <div id="qrcode"></div>
-      <div id="status"></div>
-    </div>
-
-    <div id="scanner-area">
-      <div id="reader"></div>
-      <div id="scan-status"></div>
-    </div>
-
-    <div class="switcher">
-      <button id="switchToScan">📷 Ler Ingresso</button>
-      <button id="switchToGen" style="display:none">🧾 Gerar Ingresso</button>
-    </div>
+  <div id="generator">
+    <input id="name" placeholder="Nome completo" />
+    <input id="value" placeholder="Valor (ex: 50)" />
+    <select id="type">
+      <option value="">— Selecione tipo —</option>
+      <option>VIP</option>
+      <option>Pista</option>
+      <option>Camarote</option>
+    </select>
+    <button id="btnGenerate">Gerar ingresso</button>
+    <div id="qrcode"></div>
+    <div id="status"></div>
   </div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
-    const BACKGROUND_IMG = "https://i.imgur.com/91zRBfN.png";
+  <div id="scanner-area">
+    <div id="reader"></div>
+    <div id="scan-status"></div>
+  </div>
 
-    const btnGenerate = document.getElementById('btnGenerate');
-    const qrcodeDiv = document.getElementById('qrcode');
-    const statusEl = document.getElementById('status');
-    const scanStatus = document.getElementById('scan-status');
-    const generator = document.getElementById('generator');
-    const scannerArea = document.getElementById('scanner-area');
-    const btnScan = document.getElementById('switchToScan');
-    const btnGen = document.getElementById('switchToGen');
-    let html5QrScanner;
+  <div class="switcher">
+    <button id="switchToScan">📷 Ler Ingresso</button>
+    <button id="switchToGen" style="display:none">🧾 Gerar Ingresso</button>
+  </div>
+</div>
 
-    function gerarCodigo(){
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let out="";
-      for(let i=0;i<8;i++) out+=chars.charAt(Math.floor(Math.random()*chars.length));
-      return out;
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
+const BACKGROUND_IMG = "https://i.imgur.com/91zRBfN.png";
+
+const btnGenerate = document.getElementById('btnGenerate');
+const qrcodeDiv = document.getElementById('qrcode');
+const statusEl = document.getElementById('status');
+const scanStatus = document.getElementById('scan-status');
+const generator = document.getElementById('generator');
+const scannerArea = document.getElementById('scanner-area');
+const btnScan = document.getElementById('switchToScan');
+const btnGen = document.getElementById('switchToGen');
+let html5QrScanner;
+
+function gerarCodigo(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out="";
+  for(let i=0;i<8;i++) out+=chars.charAt(Math.floor(Math.random()*chars.length));
+  return out;
+}
+
+function sendJsonp(paramsObj, cb){
+  const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+  window[callbackName] = function(resp){
+    cb(null, resp);
+    delete window[callbackName];
+    document.getElementById(callbackName + '_script')?.remove();
+  };
+  const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
+  const script = document.createElement('script');
+  script.id = callbackName + '_script';
+  script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
+  script.onerror = () => cb(new Error('Erro JSONP'));
+  document.body.appendChild(script);
+}
+
+function clearQRCode(){ qrcodeDiv.innerHTML = ""; }
+
+function renderQRCode(text, size=240){
+  clearQRCode();
+  const holder = document.createElement('div');
+  holder.style.background = "#fff";
+  holder.style.padding = "0";
+  holder.style.borderRadius = "8px";
+  qrcodeDiv.appendChild(holder);
+  new QRCode(holder, {
+    text,
+    width: size,
+    height: size,
+    colorDark:"#000000",
+    colorLight:"#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  return holder;
+}
+
+async function generateAndSend(){
+  statusEl.textContent = "";
+  clearQRCode();
+
+  const name = (document.getElementById('name').value||"").trim();
+  const value = (document.getElementById('value').value||"").trim();
+  const type = (document.getElementById('type').value||"").trim();
+
+  if(!name || !value || !type){
+    statusEl.textContent = "⚠️ Preencha Nome, Valor e Tipo.";
+    return;
+  }
+
+  const code = gerarCodigo();
+  renderQRCode(code, 260);
+  statusEl.textContent = "⏳ Gerando PDF...";
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]});
+  const bgImg = await loadImage(BACKGROUND_IMG);
+  const pageW = 148, pageH = 105;
+  const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
+  const imgW = bgImg.width * ratio;
+  const imgH = bgImg.height * ratio;
+  const x = (pageW - imgW) / 2;
+  const y = (pageH - imgH) / 2;
+  doc.addImage(bgImg, 'PNG', x, y, imgW, imgH);
+
+  function drawText(txt, x, y){
+    doc.setTextColor(0,0,0);
+    doc.text(txt, x+0.4, y+0.4);
+    doc.setTextColor(255,255,255);
+    doc.text(txt, x, y);
+  }
+
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(13);
+  drawText(`Nome: ${name}`, 12, 34);
+  drawText(`Tipo: ${type}`, 12, 42);
+  drawText(`Valor: R$ ${value}`, 12, 50);
+
+  const holder = qrcodeDiv.querySelector('div');
+  let qrImgData = null;
+  if(holder){
+    const canvas = holder.querySelector('canvas');
+    if(canvas) qrImgData = canvas.toDataURL('image/png');
+  }
+
+  if(qrImgData){
+    const qrWidthMm = 50;
+    const qrHeightMm = 50;
+    const xQr = 148 - qrWidthMm - 10;
+    const yQr = 25;
+    doc.addImage(qrImgData, 'PNG', xQr, yQr, qrWidthMm, qrHeightMm);
+  }
+
+  const safe = name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
+  doc.save(`Ingresso_${safe}_${code}.pdf`);
+
+  sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
+    if(err){
+      statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
+      return;
     }
-
-    function sendJsonp(paramsObj, cb){
-      const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-      window[callbackName] = function(resp){
-        cb(null, resp);
-        delete window[callbackName];
-        document.getElementById(callbackName + '_script')?.remove();
-      };
-      const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
-      const script = document.createElement('script');
-      script.id = callbackName + '_script';
-      script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
-      script.onerror = () => cb(new Error('Erro JSONP'));
-      document.body.appendChild(script);
+    if(resp && resp.ok){
+      statusEl.innerHTML = `✅ Ingresso salvo com sucesso!`;
+    } else {
+      statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido');
     }
+  });
+}
 
-    function clearQRCode(){ qrcodeDiv.innerHTML = ""; }
+function loadImage(url){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>reject(new Error("Erro ao carregar imagem"));
+    img.src = url;
+  });
+}
 
-    function renderQRCode(text, size=240){
-      clearQRCode();
-      const holder = document.createElement('div');
-      holder.style.background = "#fff";
-      holder.style.padding = "0";
-      holder.style.borderRadius = "8px";
-      qrcodeDiv.appendChild(holder);
-      new QRCode(holder, {
-        text,
-        width: size,
-        height: size,
-        colorDark:"#000000",
-        colorLight:"#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-      return holder;
-    }
+// === SCANNER ULTRA RÁPIDO PARA TELAS ===
+function startScanner(){
+  generator.style.display = "none";
+  scannerArea.style.display = "flex";
+  btnScan.style.display = "none";
+  btnGen.style.display = "inline-block";
+  scanStatus.textContent = "Aponte a câmera para o QR Code do ingresso.";
 
-    async function generateAndSend(){
-      statusEl.textContent = "";
-      clearQRCode();
+  if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
+  html5QrScanner = new Html5Qrcode("reader");
 
-      const name = (document.getElementById('name').value||"").trim();
-      const value = (document.getElementById('value').value||"").trim();
-      const type = (document.getElementById('type').value||"").trim();
+  const boxSize = Math.min(window.innerWidth * 0.95, 400); // QR gigante na tela
 
-      if(!name || !value || !type){
-        statusEl.textContent = "⚠️ Preencha Nome, Valor e Tipo.";
-        return;
+  Html5Qrcode.getCameras().then(cameras => {
+    if(cameras && cameras.length){
+      let cameraId = cameras[0].id;
+      for(const cam of cameras){
+        const label = (cam.label || "").toLowerCase();
+        if(label.includes("back") || label.includes("traseira") || label.includes("environment")){
+          cameraId = cam.id;
+          break;
+        }
       }
-
-      const code = gerarCodigo();
-      renderQRCode(code, 260);
-      statusEl.textContent = "⏳ Gerando PDF...";
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]});
-      const bgImg = await loadImage(BACKGROUND_IMG);
-      const pageW = 148, pageH = 105;
-      const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
-      const imgW = bgImg.width * ratio;
-      const imgH = bgImg.height * ratio;
-      const x = (pageW - imgW) / 2;
-      const y = (pageH - imgH) / 2;
-      doc.addImage(bgImg, 'PNG', x, y, imgW, imgH);
-
-      function drawText(txt, x, y){
-        doc.setTextColor(0,0,0);
-        doc.text(txt, x+0.4, y+0.4);
-        doc.setTextColor(255,255,255);
-        doc.text(txt, x, y);
-      }
-
-      doc.setFont("helvetica","bold");
-      doc.setFontSize(13);
-      drawText(`Nome: ${name}`, 12, 34);
-      drawText(`Tipo: ${type}`, 12, 42);
-      drawText(`Valor: R$ ${value}`, 12, 50);
-
-      const holder = qrcodeDiv.querySelector('div');
-      let qrImgData = null;
-      if(holder){
-        const canvas = holder.querySelector('canvas');
-        if(canvas) qrImgData = canvas.toDataURL('image/png');
-      }
-
-      if(qrImgData){
-        const qrWidthMm = 40;
-        const qrHeightMm = 40;
-        const xQr = 148 - qrWidthMm - 10;
-        const yQr = 25;
-        doc.addImage(qrImgData, 'PNG', xQr, yQr, qrWidthMm, qrHeightMm);
-      }
-
-      const safe = name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
-      doc.save(`Ingresso_${safe}_${code}.pdf`);
-
-      sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
-        if(err){
-          statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
-          return;
-        }
-        if(resp && resp.ok){
-          statusEl.innerHTML = `✅ Ingresso salvo com sucesso!`;
-        } else {
-          statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido');
-        }
+      html5QrScanner.start(
+        cameraId,
+        { fps: 30, qrbox: boxSize, disableFlip: false },
+        qrCodeMessage => {
+          scanStatus.textContent = "⏳ Verificando...";
+          html5QrScanner.stop().catch(()=>{});
+          validateTicket(qrCodeMessage);
+        },
+        errorMessage => {}
+      ).catch(err => {
+        scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
       });
+    } else {
+      scanStatus.textContent = "❌ Nenhuma câmera encontrada";
     }
+  }).catch(err => {
+    scanStatus.textContent = "❌ Erro ao acessar câmeras: " + err;
+  });
+}
 
-    function loadImage(url){
-      return new Promise((resolve,reject)=>{
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = ()=>resolve(img);
-        img.onerror = ()=>reject(new Error("Erro ao carregar imagem"));
-        img.src = url;
-      });
+function stopScanner(){
+  generator.style.display = "block";
+  scannerArea.style.display = "none";
+  btnScan.style.display = "inline-block";
+  btnGen.style.display = "none";
+  if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
+}
+
+function validateTicket(code){
+  sendJsonp({ action: "validate", codigo: code }, (err, resp)=>{
+    if(err){
+      scanStatus.textContent = "❌ Erro de rede: " + err.message;
+      return;
     }
-
-    // === SCANNER COM CÂMERA TRASEIRA ===
-    function startScanner(){
-      generator.style.display = "none";
-      scannerArea.style.display = "flex";
-      btnScan.style.display = "none";
-      btnGen.style.display = "inline-block";
-      scanStatus.textContent = "Aponte a câmera para o QR Code do ingresso.";
-
-      if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
-      html5QrScanner = new Html5Qrcode("reader");
-
-      const boxSize = Math.min(window.innerWidth * 0.8, 300);
-
-      Html5Qrcode.getCameras().then(cameras => {
-        if(cameras && cameras.length){
-          // procura câmera traseira
-          let cameraId = cameras[0].id;
-          for(const cam of cameras){
-            const label = (cam.label || "").toLowerCase();
-            if(label.includes("back") || label.includes("traseira") || label.includes("environment")){
-              cameraId = cam.id;
-              break;
-            }
-          }
-          html5QrScanner.start(
-            cameraId,
-            { fps: 20, qrbox: boxSize },
-            qrCodeMessage => {
-              scanStatus.textContent = "⏳ Verificando...";
-              html5QrScanner.stop().catch(()=>{});
-              validateTicket(qrCodeMessage);
-            },
-            errorMessage => {}
-          ).catch(err => {
-            scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
-          });
-        } else {
-          scanStatus.textContent = "❌ Nenhuma câmera encontrada";
-        }
-      }).catch(err => {
-        scanStatus.textContent = "❌ Erro ao acessar câmeras: " + err;
-      });
+    if(resp && resp.ok && resp.status === "OK"){
+      scanStatus.innerHTML = `✅ Ingresso válido!<br>Nome: <b>${resp.nome}</b><br>Tipo: ${resp.tipo}<br>Valor: R$ ${resp.valor}`;
+    } else if(resp && resp.status === "USADO"){
+      scanStatus.innerHTML = "⚠️ Ingresso já utilizado!";
+    } else {
+      scanStatus.innerHTML = "❌ Ingresso inválido ou não encontrado!";
     }
+  });
+}
 
-    function stopScanner(){
-      generator.style.display = "block";
-      scannerArea.style.display = "none";
-      btnScan.style.display = "inline-block";
-      btnGen.style.display = "none";
-      if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
-    }
-
-    function validateTicket(code){
-      sendJsonp({ action: "validate", codigo: code }, (err, resp)=>{
-        if(err){
-          scanStatus.textContent = "❌ Erro de rede: " + err.message;
-          return;
-        }
-        if(resp && resp.ok && resp.status === "OK"){
-          scanStatus.innerHTML = `✅ Ingresso válido!<br>Nome: <b>${resp.nome}</b><br>Tipo: ${resp.tipo}<br>Valor: R$ ${resp.valor}`;
-        } else if(resp && resp.status === "USADO"){
-          scanStatus.innerHTML = "⚠️ Ingresso já utilizado!";
-        } else {
-          scanStatus.innerHTML = "❌ Ingresso inválido ou não encontrado!";
-        }
-      });
-    }
-
-    btnGenerate.addEventListener('click', generateAndSend);
-    btnScan.addEventListener('click', startScanner);
-    btnGen.addEventListener('click', stopScanner);
-  </script>
+btnGenerate.addEventListener('click', generateAndSend);
+btnScan.addEventListener('click', startScanner);
+btnGen.addEventListener('click', stopScanner);
+</script>
 </body>
 </html>
