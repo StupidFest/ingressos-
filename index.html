@@ -5,20 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Gerador de Ingressos + Scanner</title>
 
-<!-- Libs -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <style>
-body{font-family:Arial,sans-serif;background:#f0f2f5;display:flex;align-items:center;justify-content:center;flex-direction:column;height:100vh;margin:0;padding:20px}
-.card{width:100%;max-width:420px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
-h1{margin:0 0 12px;font-size:20px;text-align:center}
-input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-size:14px}
-button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
-#qrcode{display:flex;justify-content:center;margin-top:10px}
-#status{margin-top:8px;font-size:14px;text-align:center}
-#reader{width:100%;max-width:420px;margin-top:20px;display:none}
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+}
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+h1 { margin: 0 0 12px; font-size: 20px; text-align: center; }
+input, select, button {
+  width: 100%; padding: 10px; margin: 8px 0;
+  border-radius: 8px; border: 1px solid #ddd; font-size: 14px;
+}
+button { background: #0069ff; color: #fff; border: none; cursor: pointer; font-weight: 700; }
+#qrcode { display: flex; justify-content: center; margin-top: 10px; }
+#status { margin-top: 8px; font-size: 14px; text-align: center; }
+#reader { width: 100%; max-width: 420px; margin-top: 20px; display: none; }
 </style>
 </head>
 <body>
@@ -32,6 +51,7 @@ button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
     <option>VIP</option>
     <option>Pista</option>
     <option>Camarote</option>
+    <option>Promocional</option>
   </select>
   <button id="btnGenerate">Gerar ingresso</button>
   <button id="btnScan">📷 Ler Ingresso (Scanner)</button>
@@ -43,10 +63,8 @@ button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
 <div id="reader"></div>
 
 <script>
-/* ========== CONFIG ========== */
 const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
 const BACKGROUND_IMG = "https://i.imgur.com/91zRBfN.png";
-/* =========================== */
 
 const btnGen = document.getElementById('btnGenerate');
 const btnScan = document.getElementById('btnScan');
@@ -69,7 +87,7 @@ function sendJsonp(paramsObj, cb){
   const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
   const script = document.createElement('script');
   script.id = callbackName + '_script';
-  script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
+  script.src = API_URL + '?' + qs;
   script.onerror = () => cb(new Error('Erro JSONP'));
   document.body.appendChild(script);
 }
@@ -115,26 +133,26 @@ async function generateAndSend(){
   doc.addImage(bgImg, 'PNG', 0, 0, 148, 105);
 
   doc.setFont("helvetica","bold");
-  doc.setFontSize(18);
+  doc.setFontSize(22);
   doc.setTextColor(255,255,255);
   doc.text(name, 12, 40);
-  doc.setFontSize(14);
-  doc.text(`TIPO: ${type}`, 12, 50);
-  doc.text(`VALOR: R$ ${value}`, 12, 58);
-  doc.text(`CÓDIGO: ${code}`, 12, 66);
+  doc.setFontSize(16);
+  doc.text(`TIPO: ${type}`, 12, 52);
+  doc.text(`VALOR: R$ ${value}`, 12, 62);
 
-  const holder = qrcodeDiv.querySelector('div canvas');
+  const holder = qrcodeDiv.querySelector('canvas');
   if(holder){
     const qrImgData = holder.toDataURL('image/png');
     doc.addImage(qrImgData, 'PNG', 148-50-10, 25, 50, 50);
   }
 
-  doc.save(`Ingresso_${name}_${code}.pdf`);
+  // remove código visual do PDF (não imprime texto com o código)
+  const pdfBase64 = doc.output('datauristring');
 
-  sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp)=>{
+  sendJsonp({ action: 'generate', name, value, type, codigo: code, pdfBase64 }, (err, resp)=>{
     if(err){ statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message; return; }
-    if(resp?.ok){ statusEl.innerHTML = `✅ Ingresso salvo! Código: <b>${resp.codigo}</b>`; }
-    else { statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido'); }
+    if(resp?.ok){ statusEl.innerHTML = `✅ Ingresso salvo! <a href="${resp.pdfUrl}" target="_blank">Abrir PDF</a>`; }
+    else { statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || 'Desconhecido'); }
   });
 }
 
@@ -151,13 +169,20 @@ btnScan.addEventListener('click', ()=>{
       html5QrCode.stop();
       readerDiv.style.display='none';
       statusEl.innerHTML = "⏳ Validando ingresso...";
-      sendJsonp({ action:"usar", codigo: decodedText }, (err, resp)=>{
+      sendJsonp({ action:"validate", codigo: decodedText }, (err, resp)=>{
         if(err){ statusEl.textContent="❌ Erro ao validar: "+err.message; return; }
-        if(resp?.ok){ statusEl.innerHTML = "✅ Ingresso validado e marcado como usado!"; }
-        else { statusEl.textContent = "⚠️ Ingresso inválido ou já utilizado."; }
+        if(resp?.ok && resp.status === "OK"){ 
+          statusEl.innerHTML = `✅ Ingresso validado: ${resp.nome} (${resp.tipo}) - R$ ${resp.valor}`;
+        }
+        else if(resp?.status === "USADO"){ 
+          statusEl.textContent = "⚠️ Ingresso já utilizado!";
+        }
+        else { 
+          statusEl.textContent = "❌ " + (resp?.message || "Ingresso inválido ou não encontrado.");
+        }
       });
     },
-    (errorMsg)=>{}
+    ()=>{}
   ).catch(err=>{
     statusEl.textContent="❌ Erro ao acessar câmera: "+err;
   });
