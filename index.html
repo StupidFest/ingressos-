@@ -3,48 +3,174 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Gerador de Ingressos</title>
+<title>Gerador de Ingressos - Corrigido</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-body{font-family:Arial,sans-serif;background:#f0f2f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px}
-.card{width:100%;max-width:420px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
-h1{margin:0 0 12px;font-size:20px;text-align:center;text-transform:uppercase}
-input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-size:14px;text-transform:uppercase}
-button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
-#qrcode{display:flex;justify-content:center;margin-top:10px}
-#status{margin-top:8px;font-size:14px;text-align:center}
+  body{font-family:Arial,sans-serif;background:#f0f2f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px}
+  .card{width:100%;max-width:420px;background:#fff;border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.12)}
+  h1{margin:0 0 12px;font-size:20px;text-align:center}
+  input,select,button{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-size:14px}
+  button{background:#0069ff;color:#fff;border:none;cursor:pointer;font-weight:700}
+  #qrcode{display:flex;justify-content:center;margin-top:10px}
+  #status{margin-top:8px;font-size:14px;text-align:center}
 </style>
 </head>
 <body>
+
 <div class="card">
   <h1>🎫 Gerador de Ingressos</h1>
   <input id="name" placeholder="Nome completo" />
   <input id="value" placeholder="Valor (ex: 50)" />
   <select id="type">
-    <option value="">— SELECIONE TIPO —</option>
-    <option>PROMOCIONAL</option>
-    <option>NORMAL</option>
+    <option value="">— Selecione tipo —</option>
     <option>VIP</option>
+    <option>Pista</option>
+    <option>Camarote</option>
   </select>
-  <button id="btnGenerate">GERAR INGRESSO</button>
-  <div style="height:10px"></div>
-  <button id="btnScanner" style="background:#28a745">📸 SCANNER INGRESSO</button>
+  <button id="btnGenerate">Gerar ingresso</button>
+
   <div id="qrcode"></div>
   <div id="status"></div>
 </div>
+
 <script>
+/* ========== CONFIG ========== */
 const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
 const BACKGROUND_IMG = "https://i.imgur.com/jjrAjpB.png";
-function gerarCodigo(){ const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let out=""; for(let i=0;i<8;i++) out+=chars.charAt(Math.floor(Math.random()*chars.length)); return out; }
-function sendJsonp(params, cb){ const cbName = 'cb_'+Date.now()+'_'+Math.floor(Math.random()*10000); window[cbName] = function(resp){ cb(null, resp); delete window[cbName]; document.getElementById(cbName+'_script')?.remove(); }; const qs = new URLSearchParams({...params, callback: cbName}).toString(); const s = document.createElement('script'); s.id = cbName+'_script'; s.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs; s.onerror = ()=>cb(new Error('JSONP failed')); document.body.appendChild(s); }
-function clearQRCode(){ document.getElementById('qrcode').innerHTML = ''; }
-function renderQRCode(text, size=220){ clearQRCode(); const holder = document.createElement('div'); holder.style.background = "#fff"; holder.style.padding = "8px"; holder.style.borderRadius = "8px"; holder.style.display = "inline-block"; document.getElementById('qrcode').appendChild(holder); new QRCode(holder, { text, width: size, height: size, colorDark:"#000000", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.H }); return holder; }
-async function loadImage(url){ return new Promise((res, rej)=>{ const img = new Image(); img.crossOrigin = "Anonymous"; img.onload = ()=>res(img); img.onerror = ()=>rej(new Error('Erro carregar imagem')); img.src = url; }); }
-async function gerarPdfAndSend(name, value, type, code){ const { jsPDF } = window.jspdf; const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]}); const bg = await loadImage(BACKGROUND_IMG); const pageW = 148, pageH = 105; const ratio = Math.min(pageW / bg.width, pageH / bg.height); const imgW = bg.width * ratio, imgH = bg.height * ratio, x = (pageW - imgW)/2, y = (pageH - imgH)/2; doc.addImage(bg, 'PNG', x, y, imgW, imgH); doc.setFont("helvetica","bold"); doc.setFontSize(26); doc.setTextColor(255,255,255); doc.text(name.toUpperCase(), pageW/2, y + 25, { align: "center" }); doc.setFontSize(14); doc.text(`VALOR: ${value.toUpperCase()}`, pageW/2, y + 45, { align: "center" }); doc.text(`TIPO: ${type.toUpperCase()}`, pageW/2, y + 58, { align: "center" }); const holder = document.querySelector('#qrcode div'); if(holder){ const canvas = holder.querySelector('canvas'); if(canvas){ const data = canvas.toDataURL('image/png'); const qrSize = 42; const qrX = pageW/2 - qrSize/2; const qrY = y + imgH - qrSize - 6; doc.addImage(data, 'PNG', qrX, qrY, qrSize, qrSize); } } return doc.output('datauristring'); }
-async function generateAndSend(){ const name = (document.getElementById('name').value||"").trim(); const value = (document.getElementById('value').value||"").trim(); const type = (document.getElementById('type').value||"").trim(); if(!name || !value || !type){ document.getElementById('status').textContent = '⚠️ Preencha todos os campos.'; return; } const code = gerarCodigo(); renderQRCode(code, 220); document.getElementById('status').textContent = '⏳ Gerando PDF...'; try{ const pdfDataUri = await gerarPdfAndSend(name, value, type, code); const link = document.createElement('a'); link.href = pdfDataUri; link.download = `Ingresso_${name.toUpperCase().replace(/[^A-Z0-9]/g,'')}_${code}.pdf`; document.body.appendChild(link); link.click(); link.remove(); document.getElementById('status').innerHTML = `✅ Ingresso gerado: <b>${code}</b>`; sendJsonp({ action: 'generate', name: name.toUpperCase(), value: value.toUpperCase(), type: type.toUpperCase(), codigo: code }, (err, resp)=>{ if(err){ document.getElementById('status').textContent = '❌ Erro ao salvar (rede)'; return; } if(resp && resp.ok){ document.getElementById('status').innerHTML += '<br>Salvo na planilha.'; } else { document.getElementById('status').textContent = '❌ Erro ao salvar'; } }); } catch(e){ document.getElementById('status').textContent = '❌ Erro ao gerar PDF: ' + e.message; } }
-document.getElementById('btnGenerate').addEventListener('click', generateAndSend);
-document.getElementById('btnScanner').addEventListener('click', ()=> window.location.href = 'validador.html');
+/* =========================== */
+
+const btn = document.getElementById('btnGenerate');
+const qrcodeDiv = document.getElementById('qrcode');
+const statusEl = document.getElementById('status');
+
+function gerarCodigo(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out="";
+  for(let i=0;i<8;i++) out+=chars.charAt(Math.floor(Math.random()*chars.length));
+  return out;
+}
+
+function sendJsonp(paramsObj, cb){
+  const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+  window[callbackName] = function(resp){
+    cb(null, resp);
+    delete window[callbackName];
+    document.getElementById(callbackName + '_script')?.remove();
+  };
+  const qs = new URLSearchParams({...paramsObj, callback: callbackName}).toString();
+  const script = document.createElement('script');
+  script.id = callbackName + '_script';
+  script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
+  script.onerror = () => cb(new Error('Erro JSONP'));
+  document.body.appendChild(script);
+}
+
+function clearQRCode(){
+  qrcodeDiv.innerHTML = "";
+}
+
+function renderQRCode(text, size=240){
+  clearQRCode();
+  const holder = document.createElement('div');
+  holder.style.background = "#fff";
+  holder.style.padding = "8px";
+  holder.style.borderRadius = "8px";
+  qrcodeDiv.appendChild(holder);
+  new QRCode(holder, { text, width: size, height: size, colorDark:"#000000", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.H });
+  return holder;
+}
+
+async function generateAndSend(){
+  statusEl.textContent = "";
+  clearQRCode();
+
+  const name = (document.getElementById('name').value||"").trim();
+  const value = (document.getElementById('value').value||"").trim();
+  const type = (document.getElementById('type').value||"").trim();
+
+  if(!name || !value || !type){ statusEl.textContent = "⚠️ Preencha Nome, Valor e Tipo."; return; }
+
+  const code = gerarCodigo();
+
+  // ✅ QR contém EXATAMENTE o código
+  renderQRCode(code, 260);
+  statusEl.textContent = "⏳ Gerando PDF...";
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:[148,105]});
+
+  const bgImg = await loadImage(BACKGROUND_IMG);
+
+  // Calcular proporção correta
+  const pageW = 148, pageH = 105;
+  const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
+  const imgW = bgImg.width * ratio;
+  const imgH = bgImg.height * ratio;
+  const x = (pageW - imgW) / 2;
+  const y = (pageH - imgH) / 2;
+
+  doc.addImage(bgImg, 'PNG', x, y, imgW, imgH);
+
+  // Texto legível: branco com sombra
+  function drawText(txt, x, y){
+    doc.setTextColor(0,0,0);
+    doc.text(txt, x+0.4, y+0.4);
+    doc.setTextColor(255,255,255);
+    doc.text(txt, x, y);
+  }
+
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(13);
+  drawText(`Nome: ${name}`, 12, 34);
+  drawText(`Tipo: ${type}`, 12, 42);
+  drawText(`Valor: R$ ${value}`, 12, 50);
+  drawText(`Código: ${code}`, 12, 58);
+
+  const holder = qrcodeDiv.querySelector('div');
+  let qrImgData = null;
+  if(holder){
+    const canvas = holder.querySelector('canvas');
+    if(canvas){ qrImgData = canvas.toDataURL('image/png'); }
+  }
+
+  if(qrImgData){
+    const qrWidthMm = 40;
+    const qrHeightMm = 40;
+    const xQr = 148 - qrWidthMm - 10;
+    const yQr = 25;
+    doc.addImage(qrImgData, 'PNG', xQr, yQr, qrWidthMm, qrHeightMm);
+  }
+
+  const safe = name.replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
+  doc.save(`Ingresso_${safe}_${code}.pdf`);
+
+  sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
+    if(err){
+      statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
+      return;
+    }
+    if(resp && resp.ok){
+      statusEl.innerHTML = `✅ Ingresso salvo! Código: <b>${resp.codigo}</b>`;
+    } else {
+      statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido');
+    }
+  });
+}
+
+function loadImage(url){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>reject(new Error("Erro ao carregar imagem"));
+    img.src = url;
+  });
+}
+
+btn.addEventListener('click', generateAndSend);
 </script>
 </body>
 </html>
