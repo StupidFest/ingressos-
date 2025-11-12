@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>🎫 Sistema de Ingressos - Tela</title>
 
-<!-- Libs -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -238,7 +237,7 @@ function loadImage(url){
   });
 }
 
-// === SCANNER ULTRA RÁPIDO PARA TELAS ===
+// === SCANNER CONTÍNUO PARA TELAS ===
 function startScanner(){
   generator.style.display = "none";
   scannerArea.style.display = "flex";
@@ -249,35 +248,43 @@ function startScanner(){
   if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
   html5QrScanner = new Html5Qrcode("reader");
 
-  const boxSize = Math.min(window.innerWidth * 0.95, 400); // QR gigante na tela
+  const boxSize = Math.min(window.innerWidth*0.95, 400);
 
-  Html5Qrcode.getCameras().then(cameras => {
-    if(cameras && cameras.length){
-      let cameraId = cameras[0].id;
-      for(const cam of cameras){
-        const label = (cam.label || "").toLowerCase();
-        if(label.includes("back") || label.includes("traseira") || label.includes("environment")){
-          cameraId = cam.id;
-          break;
-        }
-      }
-      html5QrScanner.start(
-        cameraId,
-        { fps: 30, qrbox: boxSize, disableFlip: false },
-        qrCodeMessage => {
-          scanStatus.textContent = "⏳ Verificando...";
-          html5QrScanner.stop().catch(()=>{});
-          validateTicket(qrCodeMessage);
-        },
-        errorMessage => {}
-      ).catch(err => {
-        scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err;
-      });
-    } else {
-      scanStatus.textContent = "❌ Nenhuma câmera encontrada";
+  Html5Qrcode.getCameras().then(cameras=>{
+    if(!cameras || cameras.length===0){
+      scanStatus.textContent="❌ Nenhuma câmera encontrada";
+      return;
     }
-  }).catch(err => {
-    scanStatus.textContent = "❌ Erro ao acessar câmeras: " + err;
+
+    let cameraId = cameras[0].id;
+    for(const cam of cameras){
+      const label = (cam.label||"").toLowerCase();
+      if(label.includes("back") || label.includes("traseira") || label.includes("environment")){
+        cameraId = cam.id;
+        break;
+      }
+    }
+
+    html5QrScanner.start(
+      cameraId,
+      {
+        fps: 30,
+        qrbox: boxSize,
+        disableFlip: false
+      },
+      qrCodeMessage => {
+        scanStatus.textContent="⏳ Verificando...";
+        validateTicket(qrCodeMessage);
+        // mantém scanner ativo
+        setTimeout(()=>scanStatus.textContent="Aponte a câmera para o QR Code do ingresso.", 300);
+      },
+      errorMessage => {}
+    ).catch(err=>{
+      scanStatus.textContent="❌ Erro ao iniciar câmera: "+err;
+    });
+
+  }).catch(err=>{
+    scanStatus.textContent="❌ Erro ao acessar câmeras: "+err;
   });
 }
 
