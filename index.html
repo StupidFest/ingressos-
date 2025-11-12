@@ -5,113 +5,57 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>🎫 Ingressos</title>
 
-<!-- Bibliotecas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-  body {
-    font-family: "Poppins", Arial, sans-serif;
-    background: linear-gradient(145deg, #001F3F, #007BFF);
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-  }
+body {
+  font-family: "Poppins", Arial, sans-serif;
+  background: linear-gradient(145deg, #001F3F, #007BFF);
+  margin: 0; padding: 20px;
+  display: flex; justify-content: center; align-items: flex-start;
+  min-height: 100vh;
+}
+.card {
+  background: #fff; width: 100%; max-width: 420px;
+  padding: 20px; border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+h1 {
+  text-align: center; margin-bottom: 18px;
+  color: #222; font-size: 20px; letter-spacing: 1px;
+}
+input, select, button {
+  width: 100%; padding: 12px; margin: 8px 0;
+  border-radius: 10px; border: 1px solid #ccc; font-size: 14px;
+  text-transform: uppercase;
+}
+button {
+  background: #007BFF; color: white; border: none;
+  font-weight: 700; cursor: pointer; transition: background 0.3s;
+}
+button:hover { background: #005FCC; }
+#qrcode { display: flex; justify-content: center; margin-top: 12px; }
+#status { text-align: center; margin-top: 10px; font-size: 14px; }
 
-  .card {
-    background: #fff;
-    width: 100%;
-    max-width: 420px;
-    padding: 20px;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-  }
-
-  h1 {
-    text-align: center;
-    margin-bottom: 18px;
-    color: #222;
-    font-size: 20px;
-    letter-spacing: 1px;
-  }
-
-  input, select, button {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
-
-  button {
-    background: #007BFF;
-    color: white;
-    border: none;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-
-  button:hover {
-    background: #005FCC;
-  }
-
-  #qrcode {
-    display: flex;
-    justify-content: center;
-    margin-top: 12px;
-  }
-
-  #status {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 14px;
-  }
-
-  /* Modal Scanner */
-  #scannerModal {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    z-index: 9999;
-  }
-
-  #scannerModal.show {
-    display: flex;
-  }
-
-  #reader {
-    width: 300px;
-    max-width: 90vw;
-    background: #000;
-    border-radius: 12px;
-  }
-
-  #scanResult {
-    color: white;
-    margin-top: 12px;
-    font-size: 16px;
-  }
-
-  #closeScanner {
-    margin-top: 15px;
-    padding: 10px 18px;
-    background: crimson;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-  }
+/* Scanner */
+#scannerModal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none; align-items: center; justify-content: center; flex-direction: column;
+  z-index: 9999;
+}
+#scannerModal.show { display: flex; }
+#reader {
+  width: 300px; max-width: 90vw; background: #000; border-radius: 12px;
+}
+#scanResult { color: white; margin-top: 12px; font-size: 16px; text-align:center; }
+#closeScanner {
+  margin-top: 15px; padding: 10px 18px;
+  background: crimson; color: white; border: none;
+  border-radius: 10px; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -119,9 +63,9 @@
 <div class="card">
   <h1>🎟️ GERADOR DE INGRESSOS</h1>
 
-  <input id="name" placeholder="NOME COMPLETO" style="text-transform:uppercase" />
-  <input id="value" placeholder="VALOR (EX: 50)" style="text-transform:uppercase" />
-  <select id="type" style="text-transform:uppercase">
+  <input id="name" placeholder="NOME COMPLETO" />
+  <input id="value" placeholder="VALOR (EX: 50)" />
+  <select id="type">
     <option value="">— SELECIONE O TIPO —</option>
     <option value="PROMOCIONAL">PROMOCIONAL</option>
     <option value="NORMAL">NORMAL</option>
@@ -135,7 +79,6 @@
   <div id="status"></div>
 </div>
 
-<!-- Modal do Scanner -->
 <div id="scannerModal">
   <div id="reader"></div>
   <div id="scanResult"></div>
@@ -143,202 +86,125 @@
 </div>
 
 <script>
-/* =================== CONFIG =================== */
 const API_URL = "https://script.google.com/macros/s/AKfycbxByOugkY5R0iKmuJj8Us9tTyoqjV5ZPNInExrKXRaKU_Gc5j8R1EqmSeV7U0rGHcp6/exec";
-const BACKGROUND_IMG = "https://i.imgur.com/mAZQxpi.png";
-/* ============================================== */
+const BACKGROUND_IMG = "https://i.imgur.com/91zRBfN.png";
 
-const btn = document.getElementById('btnGenerate');
-const qrcodeDiv = document.getElementById('qrcode');
 const statusEl = document.getElementById('status');
+const qrcodeDiv = document.getElementById('qrcode');
 
-/* ========== Funções utilitárias ========== */
 function gerarCodigo(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for(let i=0;i<8;i++) out += chars.charAt(Math.floor(Math.random()*chars.length));
-  return out;
+  return Array.from({length:8},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
 }
 
-function loadImage(url){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Erro ao carregar imagem"));
-    img.src = url;
-  });
+function sendJsonpOrFetch(params, cb){
+  const cbName = "cb_" + Date.now();
+  window[cbName] = (resp) => { cb(null, resp); cleanup(); };
+  function cleanup(){
+    delete window[cbName];
+    document.getElementById(cbName+"_s")?.remove();
+    clearTimeout(tmo);
+  }
+  const script = document.createElement("script");
+  script.id = cbName+"_s";
+  script.src = API_URL + "?" + new URLSearchParams({...params, callback: cbName});
+  script.onerror = ()=>{ cleanup(); fetchFallback(); };
+  document.body.appendChild(script);
+  const tmo = setTimeout(()=>{ cleanup(); fetchFallback(); }, 6000);
+
+  function fetchFallback(){
+    fetch(API_URL+"?"+new URLSearchParams(params),{mode:"no-cors"})
+    .then(()=>cb(null,{ok:true,fallback:true}))
+    .catch(e=>cb(e));
+  }
 }
 
-/* ========== JSONP robusto (Apps Script) ========== */
-function sendJsonp(params, cb, timeoutMs = 8000){
-  try {
-    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-    window[cbName] = function(resp){
-      try { cb(null, resp); } catch(e){ console.error(e); }
-      delete window[cbName];
-      document.getElementById(cbName + '_s')?.remove();
-      clearTimeout(timeoutHandle);
-    };
-    const qs = new URLSearchParams({...params, callback: cbName}).toString();
-    const script = document.createElement('script');
-    script.id = cbName + '_s';
-    script.src = API_URL + (API_URL.includes('?')? '&' : '?') + qs;
-    script.onerror = () => {
-      cb(new Error("Erro carregando JSONP"));
-      delete window[cbName];
-      script.remove();
-      clearTimeout(timeoutHandle);
-    };
-    document.body.appendChild(script);
-    const timeoutHandle = setTimeout(()=>{
-      cb(new Error("Timeout JSONP"));
-      delete window[cbName];
-      script.remove();
-    }, timeoutMs);
-  } catch(err){ cb(err); }
-}
-
-/* ========== QR Code ========== */
-function clearQRCode(){ qrcodeDiv.innerHTML = ""; }
-
-function renderQRCode(text, size=240){
-  clearQRCode();
-  const holder = document.createElement('div');
-  holder.style.background = "#fff";
-  holder.style.padding = "6px";
-  holder.style.borderRadius = "8px";
+function renderQRCode(text){
+  qrcodeDiv.innerHTML="";
+  const holder=document.createElement("div");
+  holder.style.background="#fff";holder.style.padding="6px";holder.style.borderRadius="8px";
   qrcodeDiv.appendChild(holder);
-  new QRCode(holder, { text, width: size, height: size, colorDark:"#000", colorLight:"#fff" });
+  new QRCode(holder,{text,width:240,height:240});
   return holder;
 }
 
-/* ========== Geração do ingresso ========== */
 async function generateAndSend(){
-  statusEl.textContent = "";
-  clearQRCode();
+  const name=document.getElementById('name').value.trim().toUpperCase();
+  const value=document.getElementById('value').value.trim().toUpperCase();
+  const type=document.getElementById('type').value.trim().toUpperCase();
+  if(!name||!value||!type){ statusEl.textContent="⚠️ PREENCHA TODOS OS CAMPOS!"; return; }
 
-  const name = (document.getElementById('name').value || "").trim().toUpperCase();
-  const value = (document.getElementById('value').value || "").trim().toUpperCase();
-  const type = (document.getElementById('type').value || "").trim().toUpperCase();
-
-  if(!name || !value || !type){
-    statusEl.textContent = "⚠️ PREENCHA TODOS OS CAMPOS!";
-    return;
-  }
-
-  const code = gerarCodigo();
-  renderQRCode(code, 260);
-  statusEl.textContent = "⏳ GERANDO PDF...";
+  const code=gerarCodigo();
+  renderQRCode(code);
+  statusEl.textContent="⏳ Gerando PDF...";
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [148,105] });
+  const bg = await new Promise((res,rej)=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>res(i);i.onerror=rej;i.src=BACKGROUND_IMG;});
 
-  const bgImg = await loadImage(BACKGROUND_IMG);
-  const pageW = 148, pageH = 105;
-  const ratio = Math.min(pageW / bgImg.width, pageH / bgImg.height);
-  const imgW = bgImg.width * ratio;
-  const imgH = bgImg.height * ratio;
-  const x = (pageW - imgW) / 2;
-  const y = (pageH - imgH) / 2;
-  doc.addImage(bgImg, "PNG", x, y, imgW, imgH);
+  // Define PDF do tamanho EXATO da imagem
+  const doc = new jsPDF({ orientation:"landscape", unit:"px", format:[bg.width, bg.height] });
+  doc.addImage(bg, "PNG", 0, 0, bg.width, bg.height);
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont("helvetica","bold");
   doc.setTextColor(255,255,255);
-  doc.setFontSize(26);
-  doc.text(name, 15, 50);
+  doc.setFontSize(46);
+  doc.text(name, 60, bg.height - 230);
+  doc.setFontSize(28);
+  doc.text(`VALOR: ${value} REAIS`, 60, bg.height - 180);
+  doc.text(`INGRESSO: ${type}`, 60, bg.height - 140);
 
-  doc.setFontSize(14);
-  doc.text(`VALOR: ${value} REAIS`, 15, 63);
-  doc.text(`INGRESSO: ${type}`, 15, 72);
-
-  // QR Code
-  const holder = qrcodeDiv.querySelector("canvas");
-  if(holder){
-    const qrImg = holder.toDataURL("image/png");
-    doc.addImage(qrImg, "PNG", 105, 30, 35, 35);
+  const qrCanvas=qrcodeDiv.querySelector("canvas");
+  if(qrCanvas){
+    const qrSize = 180;
+    doc.addImage(qrCanvas.toDataURL("image/png"),"PNG", bg.width - qrSize - 60, bg.height - qrSize - 80, qrSize, qrSize);
   }
 
-  const safe = name.replace(/[^a-z0-9_\- ]/ig,'').slice(0,40);
-  const pdfBase64 = doc.output("datauristring");
+  doc.save(`INGRESSO_${name}_${code}.pdf`);
 
-  sendJsonp({ action:"generate", name, value, type, codigo:code, pdfBase64 },
-    (err, resp) => {
-      if(err){
-        statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
-        return;
-      }
-      if(resp && resp.ok){
-        statusEl.innerHTML = `✅ INGRESSO SALVO!<br>CÓDIGO: <b>${code}</b>`;
-      } else {
-        statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || "Desconhecido");
-      }
-    }
-  );
-
-  doc.save(`INGRESSO_${safe}_${code}.pdf`);
+  sendJsonpOrFetch({action:"generate",name,value,type,codigo:code},(err,resp)=>{
+    if(err){ statusEl.textContent="❌ Erro ao salvar: "+err.message; return; }
+    if(resp?.ok){ statusEl.textContent="✅ Ingresso salvo com sucesso!"; }
+    else{ statusEl.textContent="⚠️ Salvo localmente, sem resposta da planilha."; }
+  });
 }
 
-/* ========== SCANNER ========== */
-const modal = document.getElementById("scannerModal");
-const scanResult = document.getElementById("scanResult");
-const closeScannerBtn = document.getElementById("closeScanner");
-let html5QrCodeInstance = null;
+/* Scanner */
+const modal=document.getElementById("scannerModal");
+const scanResult=document.getElementById("scanResult");
+const closeScannerBtn=document.getElementById("closeScanner");
+let html5QrCodeInstance=null;
 
 function openScanner(){
   modal.classList.add("show");
-  scanResult.textContent = "Aponte a câmera para o QR Code";
-  html5QrCodeInstance = new Html5Qrcode("reader");
-
+  scanResult.textContent="Aponte a câmera para o QR Code";
+  html5QrCodeInstance=new Html5Qrcode("reader");
   Html5Qrcode.getCameras().then(cameras=>{
-    if(!cameras.length){ scanResult.textContent="❌ Nenhuma câmera detectada"; return; }
-    let camId = cameras[0].id;
-    for(const c of cameras){
-      if((c.label||"").toLowerCase().includes("back")){ camId = c.id; break; }
-    }
-    html5QrCodeInstance.start(
-      camId,
-      { fps:10, qrbox:250 },
-      decodedText=>{
-        html5QrCodeInstance.stop().then(()=>validateCode(decodedText.trim()));
-      },
-      err=>{ console.debug("Scan erro", err); }
-    ).catch(err=>{
-      scanResult.textContent="❌ Erro ao iniciar câmera: "+err.message;
-    });
-  }).catch(err=>{
-    scanResult.textContent="❌ Erro ao acessar câmera";
-    console.error(err);
-  });
+    if(!cameras.length){scanResult.textContent="❌ Nenhuma câmera encontrada";return;}
+    const backCam=cameras.find(c=>c.label.toLowerCase().includes("back"))||cameras[0];
+    html5QrCodeInstance.start(backCam.id,{fps:10,qrbox:250},
+      decoded=>{
+        html5QrCodeInstance.stop().then(()=>validateCode(decoded.trim()));
+      });
+  }).catch(e=>{scanResult.textContent="❌ Erro câmera";console.error(e);});
 }
-
 function closeScanner(){
   modal.classList.remove("show");
-  if(html5QrCodeInstance){
-    html5QrCodeInstance.stop().catch(()=>{}).then(()=>html5QrCodeInstance.clear());
-  }
+  if(html5QrCodeInstance){html5QrCodeInstance.stop().catch(()=>{});}
 }
-
 function validateCode(code){
-  scanResult.textContent = "⏳ Validando...";
-  sendJsonp({ action:"validate", codigo:code }, (err,resp)=>{
-    if(err){ scanResult.textContent="❌ Erro: "+err.message; return; }
-    if(resp && resp.ok){
-      if(resp.status==="OK"){
-        scanResult.innerHTML=`✅ Ingresso válido!<br>${resp.nome}<br>${resp.valor}<br>${resp.tipo}`;
-      }else{
-        scanResult.innerHTML=`⚠️ ${resp.message||'Ingresso já utilizado'}`;
-      }
+  scanResult.textContent="⏳ Validando...";
+  sendJsonpOrFetch({action:"validate",codigo:code},(err,resp)=>{
+    if(err){scanResult.textContent="❌ "+err.message;return;}
+    if(resp?.ok){
+      scanResult.innerHTML=`✅ ${resp.nome||"Ingresso"} válido<br>${resp.tipo||""} - ${resp.valor||""}`;
     }else{
-      scanResult.textContent="❌ Código não encontrado.";
+      scanResult.textContent="⚠️ Código não encontrado ou já usado";
     }
   });
 }
-
-/* ========= EVENTOS ========= */
-btn.addEventListener("click", generateAndSend);
-document.getElementById("btnScanner").addEventListener("click", openScanner);
-closeScannerBtn.addEventListener("click", closeScanner);
+document.getElementById("btnGenerate").onclick=generateAndSend;
+document.getElementById("btnScanner").onclick=openScanner;
+closeScannerBtn.onclick=closeScanner;
 </script>
 </body>
 </html>
