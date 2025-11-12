@@ -238,7 +238,7 @@
       });
     }
 
-    // === SCANNER OTIMIZADO ===
+    // === SCANNER COM CÂMERA TRASEIRA ===
     function startScanner(){
       generator.style.display = "none";
       scannerArea.style.display = "flex";
@@ -253,7 +253,15 @@
 
       Html5Qrcode.getCameras().then(cameras => {
         if(cameras && cameras.length){
-          const cameraId = cameras[0].id;
+          // procura câmera traseira
+          let cameraId = cameras[0].id;
+          for(const cam of cameras){
+            const label = (cam.label || "").toLowerCase();
+            if(label.includes("back") || label.includes("traseira") || label.includes("environment")){
+              cameraId = cam.id;
+              break;
+            }
+          }
           html5QrScanner.start(
             cameraId,
             { fps: 20, qrbox: boxSize },
