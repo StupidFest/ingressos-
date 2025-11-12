@@ -31,12 +31,7 @@ body {
   align-items:center;
 }
 
-h1 {
-  font-size:24px;
-  margin-bottom:20px;
-  text-align:center;
-  color:#333;
-}
+h1 { font-size:24px; margin-bottom:20px; text-align:center; color:#333; }
 
 input, select, button {
   width:100%;
@@ -48,10 +43,7 @@ input, select, button {
   outline:none;
 }
 
-input:focus, select:focus {
-  border-color:#007bff;
-  box-shadow:0 0 5px rgba(0,123,255,0.5);
-}
+input:focus, select:focus { border-color:#007bff; box-shadow:0 0 5px rgba(0,123,255,0.5); }
 
 button {
   background:#007bff;
@@ -64,20 +56,8 @@ button {
 
 button:hover { background:#005fd1; }
 
-#qrcode {
-  margin-top:15px;
-  display:flex;
-  justify-content:center;
-}
-
-#status {
-  margin-top:12px;
-  font-size:15px;
-  text-align:center;
-  min-height:24px;
-  font-weight:bold;
-  color:#555;
-}
+#qrcode { margin-top:15px; display:flex; justify-content:center; }
+#status { margin-top:12px; font-size:15px; text-align:center; min-height:24px; font-weight:bold; color:#555; }
 
 #scanner-area {
   display:none;
@@ -136,9 +116,7 @@ button:hover { background:#005fd1; }
   transition:0.2s;
 }
 
-.message-overlay button:hover {
-  background:#f0f0f0;
-}
+.message-overlay button:hover { background:#f0f0f0; }
 </style>
 </head>
 <body>
@@ -176,13 +154,8 @@ button:hover { background:#005fd1; }
   <button id="okButton">OK</button>
 </div>
 
-<audio id="soundSuccess">
-  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YYQAAAAA" type="audio/wav">
-</audio>
-
-<audio id="soundFail">
-  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YYQAAAAA" type="audio/wav">
-</audio>
+<audio id="soundSuccess" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="soundFail" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzZVETR1_gVv-ErwDtKPNn61k89PHUYCtujYeDD9NvuF2IiVEGhjqzT3CkwsG9UlVsMuA/exec";
@@ -196,7 +169,8 @@ const generator = document.getElementById('generator');
 const scannerArea = document.getElementById('scanner-area');
 const btnScan = document.getElementById('switchToScan');
 const btnGen = document.getElementById('switchToGen');
-let html5QrScanner;
+let html5QrScanner = null;
+let scannerActive = false;
 
 const overlay = document.getElementById('messageOverlay');
 const messageText = document.getElementById('messageText');
@@ -235,14 +209,7 @@ function renderQRCode(text, size=240){
   holder.style.padding = "8px";
   holder.style.borderRadius = "8px";
   qrcodeDiv.appendChild(holder);
-  new QRCode(holder, {
-    text,
-    width: size,
-    height: size,
-    colorDark:"#000000",
-    colorLight:"#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
+  new QRCode(holder, { text, width: size, height: size, colorDark:"#000000", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.H });
   return holder;
 }
 
@@ -306,15 +273,9 @@ async function generateAndSend(){
   doc.save(`Ingresso_${safe}_${code}.pdf`);
 
   sendJsonp({ action: 'generate', name, value, type, codigo: code }, (err, resp) => {
-    if(err){
-      statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message;
-      return;
-    }
-    if(resp && resp.ok){
-      statusEl.innerHTML = `✅ Ingresso salvo com sucesso!`;
-    } else {
-      statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido');
-    }
+    if(err){ statusEl.textContent = "❌ Erro ao salvar (rede): " + err.message; return; }
+    if(resp && resp.ok){ statusEl.innerHTML = `✅ Ingresso salvo com sucesso!`; } 
+    else { statusEl.textContent = "❌ Erro ao salvar: " + (resp?.error || resp?.message || 'Desconhecido'); }
   });
 }
 
@@ -338,11 +299,17 @@ function startScanner(){
 
   if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
   html5QrScanner = new Html5Qrcode("reader");
+  scannerActive = true;
 
   html5QrScanner.start(
     { facingMode: "environment" },
     { fps: 15, qrbox: 200 },
-    qrCodeMessage => { validateTicket(qrCodeMessage); },
+    qrCodeMessage => {
+      if(!scannerActive) return; // evita múltiplas leituras
+      scannerActive = false; // trava scanner
+      html5QrScanner.stop().catch(()=>{});
+      validateTicket(qrCodeMessage);
+    },
     errorMessage => {}
   ).catch(err => { scanStatus.textContent = "❌ Erro ao iniciar câmera: " + err; });
 }
@@ -353,17 +320,28 @@ function stopScanner(){
   btnScan.style.display = "inline-block";
   btnGen.style.display = "none";
   if(html5QrScanner) html5QrScanner.stop().catch(()=>{});
+  scannerActive = false;
 }
 
 function showMessage(text, isValid){
   messageText.innerHTML = text.replace(/\n/g,'<br>');
-  overlay.style.backgroundColor = isValid ? "rgba(0,180,0,0.85)" : "rgba(220,0,0,0.85)";
+  overlay.style.backgroundColor = isValid ? "rgba(0,180,0,0.95)" : "rgba(220,0,0,0.95)";
   overlay.style.display = "flex";
   if(isValid) soundSuccess.play();
   else soundFail.play();
 }
 
-okButton.addEventListener('click', ()=>{ overlay.style.display='none'; });
+okButton.addEventListener('click', ()=>{
+  overlay.style.display='none';
+  // reinicia scanner se estiver no modo scanner
+  if(scannerArea.style.display !== "none") scannerActive = true;
+  if(scannerActive && html5QrScanner) html5QrScanner.start({facingMode:"environment"}, {fps:15, qrbox:200}, qrCodeMessage => {
+    if(!scannerActive) return;
+    scannerActive=false;
+    html5QrScanner.stop().catch(()=>{});
+    validateTicket(qrCodeMessage);
+  }).catch(()=>{});
+});
 
 function validateTicket(code){
   sendJsonp({ action: "validate", codigo: code }, (err, resp)=>{
@@ -385,5 +363,6 @@ btnGenerate.addEventListener('click', generateAndSend);
 btnScan.addEventListener('click', startScanner);
 btnGen.addEventListener('click', stopScanner);
 </script>
+
 </body>
 </html>
